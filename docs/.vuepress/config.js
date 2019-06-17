@@ -1,7 +1,7 @@
 const themeConfig = require('./theme-config');
 
 module.exports = {
-  base: '/fish-redux/',
+  base: '/fish-redux-docs/',
   title: 'Fish Redux Document',
   description: '',
   head: [
