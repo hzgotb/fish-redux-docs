@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/hzgotb/fish-redux-docs.svg?branch=master)](https://travis-ci.org/hzgotb/fish-redux-docs)
+
 # Plan
 
 - [ ] 整理每个库向外暴露的类，及其方法。
