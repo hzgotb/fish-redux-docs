@@ -1,0 +1,5 @@
+---
+title: MapLike class
+---
+
+# MapLike

@@ -1,5 +1,5 @@
 ---
-title: Reselecte2 类
+title: Reselecte2 class
 ---
 
 ```dart

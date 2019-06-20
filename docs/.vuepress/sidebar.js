@@ -26,9 +26,9 @@ module.exports = (locale) => ({
         sidebarDepth: 1,
         children: [
           'introduction',
-          'evolution',
-          'mechanism',
-          'other',  // 兼容性，更新日志，开发体验
+          // 'evolution',
+          // 'mechanism',
+          // 'other',  // 兼容性，更新日志，开发体验
           {
             title: groupTitle[locale].getStarted,
             collapsable: false,
@@ -41,43 +41,43 @@ module.exports = (locale) => ({
               'get-started/middleware',
             ],
           },
-          {
-            title: groupTitle[locale].advanced,
-            collapsable: false,
-            sidebarDepth: 1,
-            children: [
-              'advanced/auto-dispose',
-              'advanced/filter',
-              'advanced/higher-effect',
-              'advanced/on-error',
-              'advanced/oop',
-              'advanced/should-update',
-              'advanced/widget-wrapper',
-            ],
-          },
+          // {
+          //   title: groupTitle[locale].advanced,
+          //   collapsable: false,
+          //   sidebarDepth: 1,
+          //   children: [
+          //     'advanced/auto-dispose',
+          //     'advanced/filter',
+          //     'advanced/higher-effect',
+          //     'advanced/on-error',
+          //     'advanced/oop',
+          //     'advanced/should-update',
+          //     'advanced/widget-wrapper',
+          //   ],
+          // },
         ],
       },
-      {
-        title: groupTitle[locale].concept,
-        collapsable: false,
-        sidebarDepth: 1,
-        children: [
-          'concept/component',
-          'concept/page',
-          'concept/connector',
-          'concept/adapter',
-          'concept/route',
-          'concept/middleware',
-        ],
-      },
-      {
-        title: groupTitle[locale].other,
-        collapsable: false,
-        sidebarDepth: 1,
-        children: [
-          `other/difference-with-redux`,
-        ],
-      },
+      // {
+      //   title: groupTitle[locale].concept,
+      //   collapsable: false,
+      //   sidebarDepth: 1,
+      //   children: [
+      //     'concept/component',
+      //     'concept/page',
+      //     'concept/connector',
+      //     'concept/adapter',
+      //     'concept/route',
+      //     'concept/middleware',
+      //   ],
+      // },
+      // {
+      //   title: groupTitle[locale].other,
+      //   collapsable: false,
+      //   sidebarDepth: 1,
+      //   children: [
+      //     `other/difference-with-redux`,
+      //   ],
+      // },
     ],
     [`/${locale}/library/`]: [
       {
@@ -131,6 +131,6 @@ module.exports = (locale) => ({
         children: [],
       },
     ],
-    [`/${locale}/examples/`]: [],
+    // [`/${locale}/examples/`]: [],
   },
 });
