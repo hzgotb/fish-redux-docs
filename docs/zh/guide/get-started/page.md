@@ -37,29 +37,41 @@ class SignInPage extends Page<SignInState, Map<String, dynamic>> {
 
 ## State
 
-在 `state.dart` 内先定义一个实现 `Cloneable` 类的 `SignInState` 类，根据需求，声明类成员，以及实现一个 `clone` 的方法。
+在 `state.dart` 内先定义一个实现 `Cloneable` 的 `SignInState` 类，根据需求，声明类成员，以及实现一个 `clone` 的方法。
 
-例如，登录页有两个 `TextField` ，一个账号，一个密码，那么我们需要两个 `TextEditingController` 。
+例如，登录页有两个 `TextField` ，一个用户名，一个密码，那么我们需要两个 `TextEditingController` 。
+
+两个 `TextField` 的区别在于，密码会用上 `obscureText` 属性来将内容变成密文。
+
+为了更好的用户体验，我们通常会加入一个图标按钮，使密码可以变为明文，这意味着我们需用一个状态来控制是否显示为明文，这里我定义了`bool obscureText` 。
+
 ```dart
 class SignInState implements Cloneable<SignInState> {
-  TextEditingController accountController;
+
+  TextEditingController usernameController;
   TextEditingController passwordController;
 
+  bool obscureText;
+
+  @override
   SignInState clone() {
     return SignInState()
-      ..accountController = accountController
+      ..obscureText = obscureText
+      ..usernameController = usernameController
       ..passwordController = passwordController;
   }
 }
+
 ```
 
 然后，定义一个 `initState` 函数，它接受一个参数，参数类型同 `Page` 的第二个泛型类型一致，返回一个 `SignInState` 实例。
 
 同时我们初始化类成员的值。
 ```dart
-SignInState initState<Map<String, dynamic> args> {
+SignInState initState(Map<String, dynamic> args) {
   return SignInState()
-    ..accountController = new TextEditingController()
+    ..obscureText = true
+    ..usernameController = new TextEditingController()
     ..passwordController = new TextEditingController();
 }
 ```
@@ -75,11 +87,6 @@ SignInState initState<Map<String, dynamic> args> {
 3. ViewService viewService
 
 ```dart
-import 'package:fish_redux/fish_redux.dart';
-
-import 'action.dart';
-import 'state.dart';
-
 Widget viewBuilder(SignInState state, Dispatch dispatch, ViewService viewService) {
   return Scaffold(
     body: SafeArea(
