@@ -1,10 +1,214 @@
 ---
-title: 写一个页面
+title: 数据驱动的页面
 ---
 
-# 写一个页面
+# 数据驱动的页面
 
-假设我们要写一个登陆页面。
+Fish Redux 是一个以状态管理为核心的 `Flutter` 开发通用框架，那么我们的开发都是围绕着 `State` 所进行的。
+
+本例子为一个常见的登陆页面。
+
+最终效果如图：
+
+<img :src="$withBase('/20190622161356.png')">
+
+通常情况下，我们会有关于 APP 的原型图，或者更加精美的 UI 设计图，这时我们能够确定，这个页面我们需要多少个变量。
+
+如上图，我们分析得出：
+1. TextEditingController accountController - 用于获取用户输入的账号
+2. TextEditingController PasswordController  - 用于获取用户输入的密码
+3. bool obscureText - 用于设置密码是否为明文
+4. bool submitting - 按钮可用状态
+
+在项目里，创建一个这样的目录结构 `<project_name>/lib/pages` 。
+
+在 `pages` 文件夹下创建一个存放页面文件的文件夹，本例为 `sign_in` ，接着创建一个 `state.dart` 文件。
+
+## State
+
+首先我们要定义一个 `SignInPageState` 类，并且是实现 `Cloneable` 类的。
+
+```dart
+// lib/pages/sign_in/state.dart
+class SignInPageState implements Cloneable<SignInPageState> {}
+```
+
+然后上面所分析到的变量，添加为该类的实例属性。
+
+```dart
+class SignInPageState implements Cloneable<SignInPageState> {
+
+  TextEditingController accountController;
+  TextEditingController passwordController;
+  bool obscureText;
+  bool submitting;
+
+}
+```
+
+接着，我们要实现来自 `Cloneable` 的方法 `clone` 。为了让 `Fish Redux` 检测到页面状态已经改变，我们总是返回一个新的 `State` 对象，而非修改对象的属性值。
+
+```dart
+  @override
+  SignInPageState clone() {
+    return SignInPageState()
+      ..obscureText = obscureText
+      ..submitting = submitting
+      ..usernameController = usernameController
+      ..passwordController = passwordController;
+  }
+```
+
+最后，我们要为页面定义一个初始 `State` 的函数，这个函数接收一个参数，并返回 `SignInPageState` 的实例。
+
+```dart
+SignInPageState initState(Map<String, dynamic> args) {
+  return SignInState()
+    ..obscureText = true
+    ..submitting = false
+    ..usernameController = new TextEditingController()
+    ..passwordController = new TextEditingController();
+}
+```
+
+
+最后代码如下：
+```dart
+class SignInPageState implements Cloneable<SignInPageState> {
+
+  TextEditingController accountController;
+  TextEditingController passwordController;
+  bool obscureText;
+  bool submitting;
+
+  @override
+  SignInPageState clone() {
+    return SignInPageState()
+      ..obscureText = obscureText
+      ..submitting = submitting
+      ..accountController = accountController
+      ..passwordController = passwordController;
+  }
+}
+
+SignInPageState initState(Map<String, dynamic> args) {
+  return SignInPageState()
+    ..obscureText = true
+    ..submitting = false
+    ..accountController = TextEditingController()
+    ..passwordController = TextEditingController();
+}
+```
+
+## Action
+
+在这个例子中，我们只需要关注的两种行为：
+- 点击图标，切换密码显示效果，本质上是修改 `obscureText` 。
+- 点击登陆按钮，进入正在提交的状态，按钮不可再次点击，本质上是修改 `submitting` 。
+
+在 Fish Redux 中，修改 `State` 的意图，我们称之为 `Action` 。
+
+为了减少代码错误和约束 `Action` 命名，建议先定义一个枚举类。并添加上可能的意图：
+1. toggleObscureText - 切换 `obscureText`
+2. submit - 提交
+
+```dart
+// 创建 lib/pages/sign_in/action.dart
+enum SignInPageAction { toggleObscureText, submit }
+```
+
+接着，定义 `SignInActionCreator` ，并加上静态方法。
+
+```dart
+class SignInPageActionCreator {
+  static Action toggleObscureText() {
+    return const Action(SignInPageAction.toggleObscureText);
+  }
+  static Action submit() {
+    return const Action(SignInPageAction.submit);
+  }
+}
+```
+
+最后代码如下：
+
+```dart
+enum SignInPageAction { toggleObscureText, submit }
+
+class SignInPageActionCreator {
+  static Action toggleObscureText() {
+    return const Action(SignInPageAction.toggleObscureText);
+  }
+  static Action submit() {
+    return const Action(SignInPageAction.submit);
+  }
+}
+```
+
+## Reducer
+
+因为 `Action` 仅仅代表意图，而实际操作者，是 `Reducer` ，它会“修改”在 `State` 中的数据，然后返回一个新的 `State` 实例。
+
+在 `Reducer` 里的命名，应当是语义化的，即从函数名可看出该函数对 `State` 做了什么操作。
+
+操作函数接收两个参数：
+1. SignInPagePageState state - reducer 对应的 state
+2. Action
+
+```dart
+//创建 lib/pages/sign_in/reducer.dart
+SignInPageState _toggleObscureText(SignInPageState state, Action action) {
+  return state.clone()
+    ..obscureText = !state.obscureText;
+}
+
+SignInPageState _updateSubmitting(SignInPageState state, Action action) {
+  return state.clone()
+    ..submitting = true;
+}
+```
+
+然后，定义一个组合 `Reducer` 的函数，这是页面需要的，同时也是确定，哪些意图会调用哪些操作。
+
+```dart
+Reducer<SignInPageState> buildReducer() {
+  return asReducer({
+    SignInPageAction.toggleObscureText: _toggleObscureText,
+  });
+}
+```
+
+
+
+
+
+
+
+```dart
+import 'package:fish_redux/fish_redux.dart';
+
+import 'action.dart';
+import 'state.dart';
+
+Reducer<SignInState> buildReducer() {
+  return asReducer(
+    <Object, Reducer<SignInState>>{
+      SignInAction.cacheUserInfo: _cacheUserInfo,
+    },
+  );
+}
+
+SignInState _cacheUserInfo(SignInState state, Action action) {
+  final Map<String, dynamic> data = action.payload;
+  final newState = state.clone();
+  if (data.containsKey(StateKey.obscureText)) {
+    newState.obscureText = data[StateKey.obscureText];
+  } 
+  return newState;
+}
+
+```
+
 
 ## Page
 
@@ -32,47 +236,6 @@ class SignInPage extends Page<SignInState, Map<String, dynamic>> {
     initState: initState,
     view: viewBuilder,
   );
-}
-```
-
-## State
-
-在 `state.dart` 内先定义一个实现 `Cloneable` 的 `SignInState` 类，根据需求，声明类成员，以及实现一个 `clone` 的方法。
-
-例如，登录页有两个 `TextField` ，一个用户名，一个密码，那么我们需要两个 `TextEditingController` 。
-
-两个 `TextField` 的区别在于，密码会用上 `obscureText` 属性来将内容变成密文。
-
-为了更好的用户体验，我们通常会加入一个图标按钮，使密码可以变为明文，这意味着我们需用一个状态来控制是否显示为明文，这里我定义了`bool obscureText` 。
-
-```dart
-class SignInState implements Cloneable<SignInState> {
-
-  TextEditingController usernameController;
-  TextEditingController passwordController;
-
-  bool obscureText;
-
-  @override
-  SignInState clone() {
-    return SignInState()
-      ..obscureText = obscureText
-      ..usernameController = usernameController
-      ..passwordController = passwordController;
-  }
-}
-
-```
-
-然后，定义一个 `initState` 函数，它接受一个参数，参数类型同 `Page` 的第二个泛型类型一致，返回一个 `SignInState` 实例。
-
-同时我们初始化类成员的值。
-```dart
-SignInState initState(Map<String, dynamic> args) {
-  return SignInState()
-    ..obscureText = true
-    ..usernameController = new TextEditingController()
-    ..passwordController = new TextEditingController();
 }
 ```
 
@@ -135,61 +298,6 @@ Widget viewBuilder(SignInState state, Dispatch dispatch, ViewService viewService
 从上面的代码可以看出，我们在 `viewBuilder` 函数中使用了在 `State` 里定义的数据。
 
 可能还注意到了，我在 `LoginButton` 的点击事件中使用了 `dispatch` 。接下来我们要在 `Action` 部分去定义。
-
-## Action
-
-首先，创建 `lib/pages/sign_in/action.dart` 。
-
-然后，我先定义关于 `Action` 类型的枚举类 `SignInAction` 。
-
-```dart
-enum SignInAction {
-  login,
-}
-```
-
-接着，定义 `SignInActionCreator` 。
-
-```dart
-class SignInActionCreator {
- static Action login() {
-   return const Action(SignInAction.login);
- }
-}
-```
-
-工作尚未完成。因为 `Action` 仅仅代表，程序要做这个操作，而实际操作者，是接下来的 `Reducer` ，它会修改在 `State` 中的数据。
-
-## Reducer
-
-创建 `lib/pages/sign_in/reducer.dart` 。
-
-在 `Reducer` 里的命名，应当是语义化的，即从函数名可看出该函数对 `State` 做了什么操作。
-
-```dart
-import 'package:fish_redux/fish_redux.dart';
-
-import 'action.dart';
-import 'state.dart';
-
-Reducer<SignInState> buildReducer() {
-  return asReducer(
-    <Object, Reducer<SignInState>>{
-      SignInAction.cacheUserInfo: _cacheUserInfo,
-    },
-  );
-}
-
-SignInState _cacheUserInfo(SignInState state, Action action) {
-  final Map<String, dynamic> data = action.payload;
-  final newState = state.clone();
-  if (data.containsKey(StateKey.obscureText)) {
-    newState.obscureText = data[StateKey.obscureText];
-  } 
-  return newState;
-}
-
-```
 
 ## Effect
 
