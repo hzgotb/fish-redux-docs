@@ -179,35 +179,8 @@ Reducer<SignInPageState> buildReducer() {
 ```
 
 
+## Effect
 
-
-
-
-
-```dart
-import 'package:fish_redux/fish_redux.dart';
-
-import 'action.dart';
-import 'state.dart';
-
-Reducer<SignInState> buildReducer() {
-  return asReducer(
-    <Object, Reducer<SignInState>>{
-      SignInAction.cacheUserInfo: _cacheUserInfo,
-    },
-  );
-}
-
-SignInState _cacheUserInfo(SignInState state, Action action) {
-  final Map<String, dynamic> data = action.payload;
-  final newState = state.clone();
-  if (data.containsKey(StateKey.obscureText)) {
-    newState.obscureText = data[StateKey.obscureText];
-  } 
-  return newState;
-}
-
-```
 
 
 ## Page
@@ -298,9 +271,3 @@ Widget viewBuilder(SignInState state, Dispatch dispatch, ViewService viewService
 从上面的代码可以看出，我们在 `viewBuilder` 函数中使用了在 `State` 里定义的数据。
 
 可能还注意到了，我在 `LoginButton` 的点击事件中使用了 `dispatch` 。接下来我们要在 `Action` 部分去定义。
-
-## Effect
-
-Effect 接受处理的 Action，以 on{Verb} 命名
-```dart
-```
