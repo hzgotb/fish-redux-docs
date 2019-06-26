@@ -4,29 +4,11 @@ title: 数据驱动的页面
 
 # 数据驱动的页面
 
-Fish Redux 是一个以状态管理为核心的 `Flutter` 开发通用框架，那么我们的开发都是围绕着 `State` 所进行的。
+Fish Redux 是一个以状态管理为核心的 Flutter 开发通用框架，所以我们的开发可以围绕着状态，即数据进行。
 
-本例子为一个常见的登陆页面。
+## State - 状态
 
-最终效果如图：
-
-<img :src="$withBase('/20190622161356.png')">
-
-通常情况下，我们会有关于 APP 的原型图，或者更加精美的 UI 设计图，这时我们能够确定，这个页面我们需要多少个变量。
-
-如上图，我们分析得出：
-1. TextEditingController accountController - 用于获取用户输入的账号
-2. TextEditingController PasswordController  - 用于获取用户输入的密码
-3. bool obscureText - 用于设置密码是否为明文
-4. bool submitting - 按钮可用状态
-
-在项目里，创建一个这样的目录结构 `<project_name>/lib/pages` 。
-
-在 `pages` 文件夹下创建一个存放页面文件的文件夹，本例为 `sign_in` ，接着创建一个 `state.dart` 文件。
-
-## State
-
-首先我们要定义一个 `SignInPageState` 类，并且是实现 `Cloneable` 类的。
+通常，我们会为页面定义一个可变的 `State`，且必定是实现 `Cloneable` 类的。
 
 ```dart
 // lib/pages/sign_in/state.dart
