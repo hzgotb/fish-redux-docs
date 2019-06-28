@@ -8,160 +8,215 @@ Fish Redux 是一个以状态管理为核心的 Flutter 开发通用框架，所
 
 ## State - 状态
 
-通常，我们会为页面定义一个可变的 `State`，且必定是实现 `Cloneable` 类的。
+通常，我们会为页面定义一个 `State` 类，还有初始化 `State` 的函数。
 
 ```dart
-// lib/pages/sign_in/state.dart
-class SignInPageState implements Cloneable<SignInPageState> {}
-```
-
-然后上面所分析到的变量，添加为该类的实例属性。
-
-```dart
-class SignInPageState implements Cloneable<SignInPageState> {
-
-  TextEditingController accountController;
-  TextEditingController passwordController;
-  bool obscureText;
-  bool submitting;
-
+class HomeState {
+  String title;
 }
-```
 
-接着，我们要实现来自 `Cloneable` 的方法 `clone` 。为了让 `Fish Redux` 检测到页面状态已经改变，我们总是返回一个新的 `State` 对象，而非修改对象的属性值。
-
-```dart
-  @override
-  SignInPageState clone() {
-    return SignInPageState()
-      ..obscureText = obscureText
-      ..submitting = submitting
-      ..usernameController = usernameController
-      ..passwordController = passwordController;
-  }
-```
-
-最后，我们要为页面定义一个初始 `State` 的函数，这个函数接收一个参数，并返回 `SignInPageState` 的实例。
-
-```dart
-SignInPageState initState(Map<String, dynamic> args) {
-  return SignInState()
-    ..obscureText = true
-    ..submitting = false
-    ..usernameController = new TextEditingController()
-    ..passwordController = new TextEditingController();
+HomeState initState(Map<String, dynamic> args) {
+  return HomeState()
+    ..title = '标题';
 }
 ```
 
 
-最后代码如下：
-```dart
-class SignInPageState implements Cloneable<SignInPageState> {
 
-  TextEditingController accountController;
-  TextEditingController passwordController;
-  bool obscureText;
-  bool submitting;
+有些开发者可能会想用 `final` ，那么我们可以通过构造器来创建一个实例。
+
+```dart
+class HomeState {
+  final String title;
+
+  HomeState(this.title);
+}
+
+HomeState initState(Map<String, dynamic> args) {
+  return HomeState('标题');
+}
+```
+
+你会注意到，`initState` 接收一个类型为 `Map<String, dynamic>` 的参数，请参阅[页面传参]();
+
+
+
+**Fish Redux** 内置一个 `Cloneable<T>` 的抽象类，用于实现可变的 `State` ，其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
+
+```dart
+class HomeState implements Cloneable<HomeState> {
+  String title;
 
   @override
-  SignInPageState clone() {
-    return SignInPageState()
-      ..obscureText = obscureText
-      ..submitting = submitting
-      ..accountController = accountController
-      ..passwordController = passwordController;
+  clone() {
+    return HomeState()
+      ..title = title;
   }
-}
-
-SignInPageState initState(Map<String, dynamic> args) {
-  return SignInPageState()
-    ..obscureText = true
-    ..submitting = false
-    ..accountController = TextEditingController()
-    ..passwordController = TextEditingController();
 }
 ```
 
 ## Action
 
-在这个例子中，我们只需要关注的两种行为：
-- 点击图标，切换密码显示效果，本质上是修改 `obscureText` 。
-- 点击登陆按钮，进入正在提交的状态，按钮不可再次点击，本质上是修改 `submitting` 。
+当 `State` 是可变的时候，我们会需要一些行为来操作它们。在实际操作 `State` 之前，我们会表达我们要操作 `State` 的意图，我们称之为 `Action` ，对应的是 `Action` 类。
 
-在 Fish Redux 中，修改 `State` 的意图，我们称之为 `Action` 。
 
-为了减少代码错误和约束 `Action` 命名，建议先定义一个枚举类。并添加上可能的意图：
-1. toggleObscureText - 切换 `obscureText`
-2. submit - 提交
+
+`Action` 的构造器接收两个形参：
+
+1. type - 必要形参，`Action` 的类型
+2. payload - 命名的可选形参，传给实际操作者的参数
+
+
+
+为了约束类型的命名和开发体验，建议为 `Action` 定义一个类型的枚举类。
 
 ```dart
-// 创建 lib/pages/sign_in/action.dart
-enum SignInPageAction { toggleObscureText, submit }
+enum HomeAction { changeToEnglishTitle }
 ```
 
-接着，定义 `SignInActionCreator` ，并加上静态方法。
+
+
+再定义一个集合类 `ActionCreator` ，其包含返回一个 `Action` 实例的方法 ，所有的方法都应该是静态的。
 
 ```dart
-class SignInPageActionCreator {
-  static Action toggleObscureText() {
-    return const Action(SignInPageAction.toggleObscureText);
-  }
-  static Action submit() {
-    return const Action(SignInPageAction.submit);
+class HomeActionCreator {
+  static Action changeToEnglishTitle() {
+    return const Action(HomeAction.changeToEnglishTitle);
   }
 }
 ```
 
-最后代码如下：
+
+
+假设页面有个按钮，点击之后修改中文标题到英文标题。
 
 ```dart
-enum SignInPageAction { toggleObscureText, submit }
+...
+onPressed: () => dispatch(HomeActionCreator.changeToEnglishTitle());
+...
+```
 
-class SignInPageActionCreator {
-  static Action toggleObscureText() {
-    return const Action(SignInPageAction.toggleObscureText);
-  }
-  static Action submit() {
-    return const Action(SignInPageAction.submit);
+
+
+如果要传参的话：
+
+```dart
+enum HomeAction { ..., changeToOtherTitle }
+
+class HomeActionCreator {
+  ...
+
+  static Action changeToOtherTitle(title) {
+    return Action(HomeAction.changeToOtherTitle, payload: title);
   }
 }
 ```
+
+
+
+发出意图：
+
+```dart
+...
+onPressed: () => dispatch(HomeActionCreator.changeTitle(‘Title’));
+...
+```
+
 
 ## Reducer
 
-因为 `Action` 仅仅代表意图，而实际操作者，是 `Reducer` ，它会“修改”在 `State` 中的数据，然后返回一个新的 `State` 实例。
+因为 `Action` 仅仅代表意图，而实际操作者，是 `Reducer` ，它是一或多个 `Action` 类型为键，对应一个返回 `State` 的操作函数为值的 `Map` 结构。
 
-在 `Reducer` 里的命名，应当是语义化的，即从函数名可看出该函数对 `State` 做了什么操作。
 
-操作函数接收两个参数：
-1. SignInPagePageState state - reducer 对应的 state
-2. Action
+
+操作函数通过 `State` 的 `clone`方法新建一个新实例，并修改相对应的 `State`，然后返回该新实例。其接收两个形参：
+
+1. state - 对应的 `State`
+2. action - `Action` 实例
+
+
+
+例如，接上面的代码 `changeToEnglishTitle` ，我们需要这样的操作函数：
 
 ```dart
-//创建 lib/pages/sign_in/reducer.dart
-SignInPageState _toggleObscureText(SignInPageState state, Action action) {
+HomeState _changeTitle(HomeState state, Action action) {
   return state.clone()
-    ..obscureText = !state.obscureText;
-}
-
-SignInPageState _updateSubmitting(SignInPageState state, Action action) {
-  return state.clone()
-    ..submitting = true;
+    ..title = 'Title';
 }
 ```
 
-然后，定义一个组合 `Reducer` 的函数，这是页面需要的，同时也是确定，哪些意图会调用哪些操作。
+
+
+然后，定义一个返回 `Reducer` 的函数，这是页面需要的，同时也是确定，哪些意图会调用哪些操作。
 
 ```dart
-Reducer<SignInPageState> buildReducer() {
+Reducer<HomeState> buildReducer() {
   return asReducer({
-    SignInPageAction.toggleObscureText: _toggleObscureText,
+    HomeState.changeToEnglishTitle: _changeTitle,
   });
 }
 ```
 
 
+
+有的开发者在 `State` 中使用了 `final` ，那我们的 `Reducer` 函数可以这样写：
+
+```dart
+HomeState _changeTitle(HomeState state, Action action) {
+  return HomeState('Title');
+  
+  /// 如果一部分改变了，一部分没有改变 
+  /// HomeState(this.title, this.subTitle)
+  
+  // return HomeState('Title', state.subTitle);
+}
+```
+
+
+
+当我们有多个意图，并且是相同的操作函数时，即多对一，我们可以通过判断 `action` 的 `type` 来执行相应的操作：
+
+```dart
+HomeState _changeTitle(HomeState state, Action action) {
+  final newState = state.clone();
+  switch (action.type) {
+    case HomeAction.changeToEnglishTitle:
+      newState.title = 'Title';
+      break;
+    case HomeAction.changeToOtherTitle:
+      newState.title = action.payload;
+      break;
+  }
+  return newState;
+}
+
+Reducer<HomeState> buildReducer() {
+  return asReducer({
+    HomeState.changeToEnglishTitle: _changeTitle,
+    HomeState.changeToOtherTitle: _changeTitle,
+  });
+}
+```
+**上面的代码同时也说明了，当有传参的时候，我们是通过 `action` 的 `payload`  来获取传进来的参数。**
+
+
+
+以下草稿：
+
+
 ## Effect
+
+`State` -> `Action` -> `Reducer` 是一个单向的数据流，但有时候我们可能需要一些有副作用或者异步的操作，**Fish Redux** 提出了 `Effect` 的概念，它作为 `Action` 到 `Reducer` 的拦截层，相对应的是 `Effect` 类。
+
+
+
+与 `Reducer` 相同，也是一或多个 `Action` 类型为键，对应一个函数为值的 `Map` 结构。
+
+
+
+```dart
+void 
+```
 
 
 
