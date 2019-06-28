@@ -6,6 +6,58 @@ title: 数据驱动的页面
 
 Fish Redux 是一个以状态管理为核心的 Flutter 开发通用框架，所以我们的开发可以围绕着状态，即数据进行。
 
+
+## Page
+
+在 **Fish Redux** 中，每个页面都是一个 `Page` 。
+
+定义一个页面，最简单的是这样：
+
+```dart
+class Home extends Page<HomeState, String> {
+  Home : super(
+  	initState: initState,
+    view: viewBuilder,
+  );
+}
+```
+
+继承于 `Page` 类，而且我们需要两个类型，一个是相对应的 `State` 类，一个是传给 `initState` 的参数的类型。
+
+
+
+除了必要的初始化 `State` 的函数 `initState` ，和构建视图的函数 `viewBuilder` 外，通常我们还需要一组返回 [Action]() 的函数，有些时候也需要一组 [Effect]() 函数。
+
+
+
+class
+
+
+
+需要注意的是，一个 `Page` 最少要具有初始化状态的函数 `initState` 和视图构建函数 `viewBuilder` 。
+
+为了更好的管理，我们把不同的部分写成一个文件：
+
+1. 为 `initState` 创建 `lib/pages/sign_in/state.dart`。
+2. 为 `viewBuilder` 创建 `lib/pages/sign_in/view.dart`。
+
+然后在同目录下的 `page.dart` 引入。
+
+```dart
+import 'package:fish_redux/fish_redux.dart';
+
+import 'state.dart';
+import 'view.dart';
+
+class SignInPage extends Page<SignInState, Map<String, dynamic>> {
+  SignInPage() : super(
+    initState: initState,
+    view: viewBuilder,
+  );
+}
+```
+
+
 ## State - 状态
 
 通常，我们会为页面定义一个 `State` 类，还有初始化 `State` 的函数。
@@ -118,7 +170,7 @@ class HomeActionCreator {
 
 ```dart
 ...
-onPressed: () => dispatch(HomeActionCreator.changeTitle(‘Title’));
+onPressed: () => dispatch(HomeActionCreator.changeToOtherTitle('Title'));
 ...
 ```
 
@@ -201,110 +253,85 @@ Reducer<HomeState> buildReducer() {
 
 
 
-以下草稿：
-
 
 ## Effect
 
-`State` -> `Action` -> `Reducer` 是一个单向的数据流，但有时候我们可能需要一些有副作用或者异步的操作，**Fish Redux** 提出了 `Effect` 的概念，它作为 `Action` 到 `Reducer` 的拦截层，相对应的是 `Effect` 类。
+`State` -> `Action` -> `Reducer` 是一个单向的数据流，但有时候我们可能需要一些副作用，例如异步请求，**Fish Redux** 提出了 `Effect` 的概念，它作为 `Action` 到 `Reducer` 的拦截层，相对应的是 `Effect` 类。
 
 
+与 `Reducer` 相同，也是一或多个 `Action` 类型为键，对应一个操作函数为值的 `Map` 结构。
 
-与 `Reducer` 相同，也是一或多个 `Action` 类型为键，对应一个函数为值的 `Map` 结构。
 
+操作函数接受两个形参：
 
+1. action - `Action` 实例
+2. context - Context<T> 
+
+一个简单的 `Effect` 函数是这样的：
 
 ```dart
-void 
+void _getTile(Action action, Context<HomeState> context) async {
+  final res = await http.get(url);
+  context.dispatch(HomeActionCreator.changeToOtherTitle(res.data));
+}
 ```
 
-
-
-## Page
-
-我们首先创建一个 `lib/pages/sign_in/page.dart` 文件，然后引入 `fish_redux` 。
-
-接着，我们需要定义一个 `Page` 类的派生类 `SignInPage` 。
-
-需要注意的是，一个 `Page` 最少要具有初始化状态的函数 `initState` 和视图构建函数 `viewBuilder` 。
-
-为了更好的管理，我们把不同的部分写成一个文件：
-
-1. 为 `initState` 创建 `lib/pages/sign_in/state.dart`。
-2. 为 `viewBuilder` 创建 `lib/pages/sign_in/view.dart`。
-
-然后在同目录下的 `page.dart` 引入。
+有时候，我们可能会需要一个返回值，例如登录时，页面上会有个载入动画的弹窗，但请求完毕后，我们要关闭掉这个弹窗。
 
 ```dart
-import 'package:fish_redux/fish_redux.dart';
-
-import 'state.dart';
-import 'view.dart';
-
-class SignInPage extends Page<SignInState, Map<String, dynamic>> {
-  SignInPage() : super(
-    initState: initState,
-    view: viewBuilder,
-  );
+Future<Response> _getTitle(Action action, Context<HomeState> context) {
+  return http.get(url);
 }
+```
+
+在页面调用时：
+
+```dart
+...
+onPressed: () async {
+  showDialog(...);
+  try {
+    final res = await dispatch(HomeActionCreator.getTitle());
+    // 当完成后，先关闭 dialog
+    Navigator.of(context).pop();
+    // 然后通过判断res.code来做不同的操作。
+  } catch (e) {
+    
+  }
+}
+...
 ```
 
 ## View
 
-在 `view.start` 内，我们需要定义一个 `viewBuilder` 函数。
+在视图部分，我们仅需要定义一个提供视图的函数即可，例如 `viewBuilder` 。
 
-这个函数接收三个参数：
+这个函数将接收三个形参：
 
-1. SignInState state
-2. Dispatch dispatch
-3. ViewService viewService
+1. state - 对应的 state
+2. dispatch - 发出意图的方法
+3. viewService - `ViewService` 实例
 
 ```dart
-Widget viewBuilder(SignInState state, Dispatch dispatch, ViewService viewService) {
+Widget viewBuilder(HomeState state, Dispatch dispatch, ViewService viewService) {
   return Scaffold(
+    appBar: AppBar(
+      title: Text(state.title),
+    ),
     body: SafeArea(
       child: Center(
-        child: Column(
-          children: <Widget>[
-            // Account TextField
-            Container(
-              margin: EdgeInsets.fromLTRB(40.0, 26.0, 40.0, 10.0),
-              child: TextField(
-                controller: state.uidController,
-                decoration: InputDecoration(
-                  labelText: 'Account',
-                ),
-              ),
-            ),
-            //  Password TextField
-            Container(
-              margin: EdgeInsets.fromLTRB(40.0, 0, 40.0, 0.0),
-              child: TextField(
-                controller: state.pwdController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                ),
-              ),
-            ),
-            // LoginButton
-            Container(
-              margin: EdgeInsets.fromLTRB(40.0, 26.0, 40.0, 0),
-              width: 180.0,
-              height: 48.0,
-              child: RaisedButton(
-                color: Color(0xFFffd84d),
-                onPressed: () => dispatch(SignInActionCreator.login()),
-                child: Text('LOGIN', style: TextStyle(fontSize: 18.0)),
-              ),
-            ),
-          ],
+        child: Container(
+          margin: EdgeInsets.fromLTRB(40.0, 26.0, 40.0, 0),
+          width: 180.0,
+          height: 48.0,
+          child: RaisedButton(
+            color: Color(0xFFffd84d),
+            onPressed: () => dispatch(HomeActionCreator.changeToEnglishTitle()),
+            child: Text('修改标题', style: TextStyle(fontSize: 18.0)),
+          ),
         ),
       ),
     ),
   );
 }
 ```
-
-从上面的代码可以看出，我们在 `viewBuilder` 函数中使用了在 `State` 里定义的数据。
-
-可能还注意到了，我在 `LoginButton` 的点击事件中使用了 `dispatch` 。接下来我们要在 `Action` 部分去定义。
