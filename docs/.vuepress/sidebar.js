@@ -25,22 +25,23 @@ module.exports = (locale) => ({
         collapsable: false,
         sidebarDepth: 1,
         children: [
-          'introduction',
+          // 'introduction',
           // 'evolution',
           // 'mechanism',
           // 'other',  // 兼容性，更新日志，开发体验
-          {
-            title: groupTitle[locale].getStarted,
-            collapsable: false,
-            sidebarDepth: 1,
-            children: [
-              'get-started/installation',
-              'get-started/page',
-              'get-started/component',
-              'get-started/dependencies',
-              'get-started/middleware',
-            ],
-          },
+          'get-started/',
+          // {
+          //   title: groupTitle[locale].getStarted,
+          //   collapsable: false,
+          //   sidebarDepth: 1,
+          //   children: [
+          //     'get-started/installation',
+          //     'get-started/page',
+              // 'get-started/component',
+              // 'get-started/dependencies',
+              // 'get-started/middleware',
+          //   ],
+          // },
           // {
           //   title: groupTitle[locale].advanced,
           //   collapsable: false,

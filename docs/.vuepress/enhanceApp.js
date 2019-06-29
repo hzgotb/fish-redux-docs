@@ -7,7 +7,7 @@ export default ({
   // ...做一些其他的应用级别的优化
   router.beforeEach((to,from, next) => {
     if (/guide\/$/.test(to.fullPath)) {
-      next(to.fullPath + 'introduction.html');
+      next(to.fullPath + 'get-started');
     }
     next();
   });
