@@ -2,74 +2,52 @@
 title: 数据驱动的页面
 ---
 
-# 数据驱动的页面
+# 入门
 
-Fish Redux 是一个以状态管理为核心的 Flutter 开发通用框架，所以我们的开发可以围绕着状态，即数据进行。
+## 什么是 Fish Redux
 
+**Fish Redux** 是一个基于 Redux 数据管理的组装式 flutter 应用框架， 它特别适用于构建中大型的复杂应用。
 
-## Page
+## 页面的组成部分
 
-在 **Fish Redux** 中，每个页面都是一个 `Page` 。
+**Fish Redux** 的特点是配置式组装。 
 
-定义一个页面，最简单的是这样：
+在视图方面将一个大的页面拆解成一些独立的模块，称之为组件（Component）。
 
-```dart
-class Home extends Page<HomeState, String> {
-  Home : super(
-  	initState: initState,
-    view: viewBuilder,
-  );
-}
-```
-
-继承于 `Page` 类，而且我们需要两个类型，一个是相对应的 `State` 类，一个是传给 `initState` 的参数的类型。
+为了更好的扩展和解耦，**Fish Redux** 将这些模块拆分为几个部分：
+- View - 视图
+- State - 数据
+- Reducer - 操作数据
+- Effect - 处理副作用
+- Dependencies - 子组件挂载
 
 
 
-除了必要的初始化 `State` 的函数 `initState` ，和构建视图的函数 `viewBuilder` 外，通常我们还需要一组返回 [Action]() 的函数，有些时候也需要一组 [Effect]() 函数。
+页面（Page）是一个特殊的模块，它继承于组件，有组件的所有特性。
+
+页面和组件的区别在于，页面的数据是自身的，它有一个必要的函数 `initState` ，用于初始化自身的数据，而组件的数据是通过连接器（Connector）向其父组件（可能是一个页面）获取的。
 
 
 
-class
+## 一个简单的页面
 
-
-
-需要注意的是，一个 `Page` 最少要具有初始化状态的函数 `initState` 和视图构建函数 `viewBuilder` 。
-
-为了更好的管理，我们把不同的部分写成一个文件：
-
-1. 为 `initState` 创建 `lib/pages/sign_in/state.dart`。
-2. 为 `viewBuilder` 创建 `lib/pages/sign_in/view.dart`。
-
-然后在同目录下的 `page.dart` 引入。
+首先，我们可以先为页面定义一个 `State` 类：
 
 ```dart
-import 'package:fish_redux/fish_redux.dart';
-
-import 'state.dart';
-import 'view.dart';
-
-class SignInPage extends Page<SignInState, Map<String, dynamic>> {
-  SignInPage() : super(
-    initState: initState,
-    view: viewBuilder,
-  );
-}
-```
-
-
-## State - 状态
-
-通常，我们会为页面定义一个 `State` 类，还有初始化 `State` 的函数。
-
-```dart
-class HomeState {
+class HomePageState {
   String title;
 }
+```
 
-HomeState initState(Map<String, dynamic> args) {
-  return HomeState()
+
+
+还有页面必要的，用于初始化数据的函数 `initState` ，它接收一个参数，参数类型和页面定义的一致：
+
+```dart
+HomePageState initState(String title) {
+  return HomePageState()
     ..title = '标题';
+    // or ..title = title;
 }
 ```
 
@@ -78,203 +56,220 @@ HomeState initState(Map<String, dynamic> args) {
 有些开发者可能会想用 `final` ，那么我们可以通过构造器来创建一个实例。
 
 ```dart
-class HomeState {
+class HomePageState {
   final String title;
 
-  HomeState(this.title);
+  HomePageState(this.title);
 }
 
-HomeState initState(Map<String, dynamic> args) {
-  return HomeState('标题');
+HomePageState initState(String title) {
+  return HomePageState('标题');
+  // return HomePageState(title);
 }
 ```
 
-你会注意到，`initState` 接收一个类型为 `Map<String, dynamic>` 的参数，请参阅[页面传参]();
 
 
+在 **Fish Redux** 中，每个页面继承于 `Page<T,P>` 类，其中 `T` 为对应的 `State` 类， `P` 为初始化 `State` 的函数的参数的类型：
+
+```dart
+class HomePage extends Page<HomePageState, String> {
+  Home : super(
+  	initState: initState,
+    view: viewBuilder,
+  );
+}
+```
+
+
+
+除了 `initState` 函数外，还有一个必要的函数是提供视图的，即 `viewBuilder` ，它接收三个参数：
+
+1. T state - 对应的数据
+2. Dispatch dispatch - 用于发送操作数据的意图
+3. ViewService viewService - 一些扩展的服务
+
+并返回一个 `Widget` ：
+
+```dart
+Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewService) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(state.title),
+    ),
+  );
+}
+```
+
+
+
+## 可变的数据
+
+
+很多情况下，我们都需要修改页面的数据。
 
 **Fish Redux** 内置一个 `Cloneable<T>` 的抽象类，用于实现可变的 `State` ，其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
 
 ```dart
-class HomeState implements Cloneable<HomeState> {
+class HomePageState implements Cloneable<HomePageState> {
   String title;
 
   @override
   clone() {
-    return HomeState()
+    return HomePageState()
       ..title = title;
   }
 }
 ```
 
-## Action
-
-当 `State` 是可变的时候，我们会需要一些行为来操作它们。在实际操作 `State` 之前，我们会表达我们要操作 `State` 的意图，我们称之为 `Action` ，对应的是 `Action` 类。
+**如果使用了 final 声明，则不需要这样写。**
 
 
 
-`Action` 的构造器接收两个形参：
-
-1. type - 必要形参，`Action` 的类型
-2. payload - 命名的可选形参，传给实际操作者的参数
+除了实现 `clone` 方法，我们还需要用到页面组成的其他部分，即 `Reducer` ，数据的操作者。我们怎么去调用 `Reducer` 呢？通过 `dispatch` 函数，它接收两个参数，一个为必要的 `Action` 类型，一个为可选的命名参数 `payload` 。
 
 
 
-为了约束类型的命名和开发体验，建议为 `Action` 定义一个类型的枚举类。
+同时，为了更好的协作开发和减少低级错误，我们会定义一个 `Action` 类型的枚举类：
 
 ```dart
-enum HomeAction { changeToEnglishTitle }
+enum HomePageAction { changeToEnglishTitle }
 ```
 
 
 
-再定义一个集合类 `ActionCreator` ，其包含返回一个 `Action` 实例的方法 ，所有的方法都应该是静态的。
+然后我们再来定义 `Reducer` ：
 
 ```dart
-class HomeActionCreator {
-  static Action changeToEnglishTitle() {
-    return const Action(HomeAction.changeToEnglishTitle);
-  }
-}
-```
-
-
-
-假设页面有个按钮，点击之后修改中文标题到英文标题。
-
-```dart
-...
-onPressed: () => dispatch(HomeActionCreator.changeToEnglishTitle());
-...
-```
-
-
-
-如果要传参的话：
-
-```dart
-enum HomeAction { ..., changeToOtherTitle }
-
-class HomeActionCreator {
-  ...
-
-  static Action changeToOtherTitle(title) {
-    return Action(HomeAction.changeToOtherTitle, payload: title);
-  }
-}
-```
-
-
-
-发出意图：
-
-```dart
-...
-onPressed: () => dispatch(HomeActionCreator.changeToOtherTitle('Title'));
-...
-```
-
-
-## Reducer
-
-因为 `Action` 仅仅代表意图，而实际操作者，是 `Reducer` ，它是一或多个 `Action` 类型为键，对应一个返回 `State` 的操作函数为值的 `Map` 结构。
-
-
-
-操作函数通过 `State` 的 `clone`方法新建一个新实例，并修改相对应的 `State`，然后返回该新实例。其接收两个形参：
-
-1. state - 对应的 `State`
-2. action - `Action` 实例
-
-
-
-例如，接上面的代码 `changeToEnglishTitle` ，我们需要这样的操作函数：
-
-```dart
-HomeState _changeTitle(HomeState state, Action action) {
-  return state.clone()
-    ..title = 'Title';
-}
-```
-
-
-
-然后，定义一个返回 `Reducer` 的函数，这是页面需要的，同时也是确定，哪些意图会调用哪些操作。
-
-```dart
-Reducer<HomeState> buildReducer() {
+Reducer<HomePageState> buildReducer() {
   return asReducer({
-    HomeState.changeToEnglishTitle: _changeTitle,
+    HomePageAction.changeToEnglishTitle: _changeTitle,
   });
 }
-```
 
-
-
-有的开发者在 `State` 中使用了 `final` ，那我们的 `Reducer` 函数可以这样写：
-
-```dart
-HomeState _changeTitle(HomeState state, Action action) {
-  return HomeState('Title');
+HomePageState _changeTitle(HomePageState state, Action action) {
+  return state.clone()
+    ..title = 'Title';
   
-  /// 如果一部分改变了，一部分没有改变 
-  /// HomeState(this.title, this.subTitle)
-  
-  // return HomeState('Title', state.subTitle);
+  /// 使用了 final 的 State
+  /// return HomePageState('Title');
+  /// 部分改变，部分不变
+  /// 如果 State 构造器为 HomePageState(this.title, this.subTitle)
+  /// return HomePageState('Title', state.subTitle);
 }
 ```
 
 
 
-当我们有多个意图，并且是相同的操作函数时，即多对一，我们可以通过判断 `action` 的 `type` 来执行相应的操作：
+把 `Reducer` 加入到页面中：
 
 ```dart
-HomeState _changeTitle(HomeState state, Action action) {
+class HomePage extends Page<HomePageState, String> {
+  Home : super(
+  	initState: initState,
+    view: viewBuilder,
+    reducer: buildReducer(),
+  );
+}
+```
+
+
+
+在视图中调用：
+
+```dart
+dispatch(Action(HomePageAction.changeToEnglishTitle));
+```
+
+
+
+## 使用参数修改数据
+
+很多时候，我们需要修改的值是不确定的，所以可以通过传参来修改数据：
+
+```dart
+// 1
+enum HomePageAction { changeToEnglishTitle, changeToOtherTitle }
+
+// 2
+Reducer<HomePageState> buildReducer() {
+  return asReducer({
+    HomePageAction.changeToEnglishTitle: _changeTitle,
+    HomePageAction.changeToOtherTitle: _changeTitle,
+  });
+}
+
+HomePageState _changeTitle(HomePageState state, Action action) {
   final newState = state.clone();
   switch (action.type) {
-    case HomeAction.changeToEnglishTitle:
+    case HomePageAction.changeToEnglishTitle:
       newState.title = 'Title';
       break;
-    case HomeAction.changeToOtherTitle:
-      newState.title = action.payload;
+    case HomePageAction.changeToOtherTitle:
+      newState.title = action.payload;	// 使用参数
       break;
   }
   return newState;
 }
 
-Reducer<HomeState> buildReducer() {
-  return asReducer({
-    HomeState.changeToEnglishTitle: _changeTitle,
-    HomeState.changeToOtherTitle: _changeTitle,
-  });
-}
+// 3
+dispatch(Action(HomePageAction.changeToOtherTitle, payload: 'Fish Redux'));
 ```
-**上面的代码同时也说明了，当有传参的时候，我们是通过 `action` 的 `payload`  来获取传进来的参数。**
 
 
 
-
-## Effect
-
-`State` -> `Action` -> `Reducer` 是一个单向的数据流，但有时候我们可能需要一些副作用，例如异步请求，**Fish Redux** 提出了 `Effect` 的概念，它作为 `Action` 到 `Reducer` 的拦截层，相对应的是 `Effect` 类。
-
-
-与 `Reducer` 相同，也是一或多个 `Action` 类型为键，对应一个操作函数为值的 `Map` 结构。
-
-
-操作函数接受两个形参：
-
-1. action - `Action` 实例
-2. context - Context<T> 
-
-一个简单的 `Effect` 函数是这样的：
+比较建议的是，可以通过定义一个集合返回 `Action` 的函数的类，这样可以约束到 `payload` 的类型：
 
 ```dart
-void _getTile(Action action, Context<HomeState> context) async {
+class HomePageActionCreator {
+  static Action changeToEnglishTitle() {
+    return const Action(HomePageAction.changeToEnglishTitle);
+  }
+  static Action changeToOtherTitle(String title) {
+    return Action(HomePageAction.changeToOtherTitle, payload: title);
+  }
+}
+
+// 调用
+dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
+```
+
+
+## 处理副作用
+
+有时候，我们修改数据，可能需要一些副作用，例如异步请求，**Fish Redux** 提出了 `Effect` 的概念。
+
+一个简单的 `Effect` 是这样的：
+
+```dart
+void _getTile(Action action, Context<HomePageState> context) async {
   final res = await http.get(url);
   context.dispatch(HomeActionCreator.changeToOtherTitle(res.data));
 }
+
+Effect<HomePageState> buildEffect() {
+  return combineEffects(<Object, Effect<HomePageState>>{
+    HomePageAction.getTitle: _getTitle,
+  });
+}
 ```
+
+
+
+为了让它生效，需要在页面上加入它：
+
+```dart
+class HomePage extends Page<HomePageState, String> {
+  Home : super(
+  	initState: initState,
+    view: viewBuilder,
+    reducer: buildReducer(),
+    effect: buildEffect(),
+  );
+}
+```
+
+
 
 有时候，我们可能会需要一个返回值，例如登录时，页面上会有个载入动画的弹窗，但请求完毕后，我们要关闭掉这个弹窗。
 
@@ -295,43 +290,12 @@ onPressed: () async {
     // 当完成后，先关闭 dialog
     Navigator.of(context).pop();
     // 然后通过判断res.code来做不同的操作。
+    if (res.code == 200) {
+      // dispatch(...)
+    }
   } catch (e) {
     
   }
 }
 ...
-```
-
-## View
-
-在视图部分，我们仅需要定义一个提供视图的函数即可，例如 `viewBuilder` 。
-
-这个函数将接收三个形参：
-
-1. state - 对应的 state
-2. dispatch - 发出意图的方法
-3. viewService - `ViewService` 实例
-
-```dart
-Widget viewBuilder(HomeState state, Dispatch dispatch, ViewService viewService) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(state.title),
-    ),
-    body: SafeArea(
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.fromLTRB(40.0, 26.0, 40.0, 0),
-          width: 180.0,
-          height: 48.0,
-          child: RaisedButton(
-            color: Color(0xFFffd84d),
-            onPressed: () => dispatch(HomeActionCreator.changeToEnglishTitle()),
-            child: Text('修改标题', style: TextStyle(fontSize: 18.0)),
-          ),
-        ),
-      ),
-    ),
-  );
-}
 ```
