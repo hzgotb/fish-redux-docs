@@ -16,7 +16,7 @@ title: 入门
 ```yaml
 ...
 dependencies:
-  fish_redux: ^0.2.0
+  fish_redux: ^0.2.2
 ...
 ```
 
@@ -44,7 +44,7 @@ dependencies:
 
 在视图方面将一个大的页面拆解成一些独立的模块，称之为组件（Component）。
 
-为了更好的扩展和解耦，**Fish Redux** 将这些模块拆分为几个部分：
+为了更好的扩展和解耦，**Fish Redux** 将模块拆分为几个部分：
 - View - 视图
 - State - 数据
 - Reducer - 操作数据
@@ -119,7 +119,6 @@ class HomePage extends Page<HomePageState, String> {
 2. Dispatch dispatch - 用于发送操作数据的意图
 3. ViewService viewService - 一些扩展的服务
 
-并返回一个 `Widget` ：
 
 ```dart
 Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewService) {
@@ -135,14 +134,17 @@ Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewServi
 
 ## 可变的数据
 
+多数情况下，我们都需要修改页面的数据。
 
-很多情况下，我们都需要修改页面的数据。
+**Fish Redux** 遵循 **Redux** 单向数据流的设计核心，在 `State` 可变的情况下，修改 `State` ，必须通过触发 `Action` ，然后调用 `Reducer` 去修改数据。
 
-**Fish Redux** 内置一个 `Cloneable<T>` 的抽象类，用于实现可变的 `State` ，其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
+### State
+
+首先声明一个可变的 `State`，并实现 `Cloneable<T>` 抽象类。可变 `State` 的核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
 
 ```dart
 class HomePageState implements Cloneable<HomePageState> {
-  String title;
+  String title
 
   @override
   clone() {
@@ -151,24 +153,38 @@ class HomePageState implements Cloneable<HomePageState> {
   }
 }
 ```
-
-**如果使用了 final 声明，则不需要这样写。**
-
+需要注意的是，**State 在不使用 final 去声明时，是可以任意读写的。所以即使没有限制，修改 State 也应当通过触发 Action 来进行**。
 
 
-除了实现 `clone` 方法，我们还需要用到页面组成的其他部分，即 `Reducer` ，数据的操作者。我们怎么去调用 `Reducer` 呢？通过 `dispatch` 函数，它接收两个参数，一个为必要的 `Action` 类型，一个为可选的命名参数 `payload` 。
+### Action
+
+在 `View` 或 `Effect` 中触发 `Action`，是通过 `dispatch` 函数：
+```dart
+dispatch(Action('changeToEnglishTitle'));
+
+// or
+dispatch(Action('changeToOtherTitle', payload: 'other title'));
+```
+
+`Action` 构造器接收两个参数：
+1. Object type - 必选，`Action` 类型
+2. dyanmic payload - 可选，接收的参数
 
 
-
-同时，为了更好的协作开发和减少低级错误，我们会定义一个 `Action` 类型的枚举类：
+为了更好的协作开发和减少低级错误，建议声明一个 `Action` 类型的枚举类：
 
 ```dart
 enum HomePageAction { changeToEnglishTitle }
 ```
 
+调用：
+```dart
+dispatch(Action(HomePageAction.changeToEnglishTitle))
+```
 
+### Reducer
 
-然后我们再来定义 `Reducer` ：
+因为 `Reducer` 是属于 `Page` 的一部分，所以我们需要一个用于返回 `Reducers` 到 `Page` 的函数。
 
 ```dart
 Reducer<HomePageState> buildReducer() {
@@ -176,7 +192,10 @@ Reducer<HomePageState> buildReducer() {
     HomePageAction.changeToEnglishTitle: _changeTitle,
   });
 }
+```
 
+接着声明，实际操作数据的函数：
+```dart
 HomePageState _changeTitle(HomePageState state, Action action) {
   return state.clone()
     ..title = 'Title';
@@ -188,7 +207,6 @@ HomePageState _changeTitle(HomePageState state, Action action) {
   /// return HomePageState('Title', state.subTitle);
 }
 ```
-
 
 
 把 `Reducer` 加入到页面中：
@@ -204,24 +222,15 @@ class HomePage extends Page<HomePageState, String> {
 ```
 
 
-
-在视图中调用：
-
-```dart
-dispatch(Action(HomePageAction.changeToEnglishTitle));
-```
-
-
-
 ## 使用参数修改数据
 
-很多时候，我们需要修改的值是不确定的，所以可以通过传参来修改数据：
+有一种场景是，数据是非本地的，即可能是网络请求得到的，这种情况下，通过传参来修改 `State` ：
 
 ```dart
-// 1
+// 使用枚举类约束 Action 类型
 enum HomePageAction { changeToEnglishTitle, changeToOtherTitle }
 
-// 2
+// 定义 Reducer
 Reducer<HomePageState> buildReducer() {
   return asReducer({
     HomePageAction.changeToEnglishTitle: _changeTitle,
@@ -242,10 +251,9 @@ HomePageState _changeTitle(HomePageState state, Action action) {
   return newState;
 }
 
-// 3
+// 调用
 dispatch(Action(HomePageAction.changeToOtherTitle, payload: 'Fish Redux'));
 ```
-
 
 
 比较建议的是，可以通过定义一个集合返回 `Action` 的函数的类，这样可以约束到 `payload` 的类型：
@@ -267,7 +275,7 @@ dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
 
 ## 处理副作用
 
-有时候，我们修改数据，可能需要一些副作用，例如异步请求，**Fish Redux** 提出了 `Effect` 的概念。
+有时候，我们修改数据，可能需要一些副作用，例如异步请求，
 
 一个简单的 `Effect` 是这样的：
 
