@@ -6,7 +6,7 @@ title: 入门
 
 ## 什么是 Fish Redux
 
-**Fish Redux** 是一个基于 Redux 数据管理的组装式 flutter 应用框架， 它特别适用于构建中大型的复杂应用。
+**Fish Redux** 是一个基于 Redux 数据管理的组装式 Flutter 应用框架， 它特别适用于构建中大型的复杂应用。
 
 ## 安装
 
@@ -80,7 +80,6 @@ HomePageState initState(String title) {
     // or ..title = title;
 }
 ```
-
 
 
 有些开发者可能会想用 `final` ，那么我们可以通过构造器来创建一个实例。
@@ -275,16 +274,18 @@ dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
 
 ## 处理副作用
 
-有时候，我们修改数据，可能需要一些副作用，例如异步请求，
+由于 Redux 是同步的，单向的，纯函数的，导致一些行为无法被处理，例如异步请求。
 
-一个简单的 `Effect` 是这样的：
+对此，我们可以使用 `Effect` 去解决：
 
 ```dart
+// 处理的函数
 void _getTile(Action action, Context<HomePageState> context) async {
   final res = await http.get(url);
   context.dispatch(HomeActionCreator.changeToOtherTitle(res.data));
 }
 
+// 返回 Effect 组合给页面的函数
 Effect<HomePageState> buildEffect() {
   return combineEffects(<Object, Effect<HomePageState>>{
     HomePageAction.getTitle: _getTitle,
@@ -301,39 +302,7 @@ class HomePage extends Page<HomePageState, String> {
   Home : super(
   	initState: initState,
     view: viewBuilder,
-    reducer: buildReducer(),
     effect: buildEffect(),
   );
 }
-```
-
-
-
-有时候，我们可能会需要一个返回值，例如登录时，页面上会有个载入动画的弹窗，但请求完毕后，我们要关闭掉这个弹窗。
-
-```dart
-Future<Response> _getTitle(Action action, Context<HomeState> context) {
-  return http.get(url);
-}
-```
-
-在页面调用时：
-
-```dart
-...
-onPressed: () async {
-  showDialog(...);
-  try {
-    final res = await dispatch(HomeActionCreator.getTitle());
-    // 当完成后，先关闭 dialog
-    Navigator.of(context).pop();
-    // 然后通过判断res.code来做不同的操作。
-    if (res.code == 200) {
-      // dispatch(...)
-    }
-  } catch (e) {
-    
-  }
-}
-...
 ```
