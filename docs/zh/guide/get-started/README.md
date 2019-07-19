@@ -38,7 +38,9 @@ dependencies:
 
 [flipperkit_fish_redux_middleware](https://pub.dev/packages/flipperkit_fish_redux_middleware)
 
-## 页面的组成部分
+
+## 页面
+### 组成部分
 
 **Fish Redux** 的特点是配置式组装。 
 
@@ -59,7 +61,7 @@ dependencies:
 
 
 
-## 一个简单的页面
+### 简单页面
 
 首先，我们可以先为页面定义一个 `State` 类：
 
@@ -131,13 +133,13 @@ Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewServi
 
 
 
-## 可变的数据
+### 可变的数据
 
 多数情况下，我们都需要修改页面的数据。
 
 **Fish Redux** 遵循 **Redux** 单向数据流的设计核心，在 `State` 可变的情况下，修改 `State` ，必须通过触发 `Action` ，然后调用 `Reducer` 去修改数据。
 
-### State
+#### State
 
 首先声明一个可变的 `State`，并实现 `Cloneable<T>` 抽象类。可变 `State` 的核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
 
@@ -155,7 +157,7 @@ class HomePageState implements Cloneable<HomePageState> {
 需要注意的是，**State 在不使用 final 去声明时，是可以任意读写的。所以即使没有限制，修改 State 也应当通过触发 Action 来进行**。
 
 
-### Action
+#### Action
 
 在 `View` 或 `Effect` 中触发 `Action`，是通过 `dispatch` 函数：
 ```dart
@@ -181,7 +183,7 @@ enum HomePageAction { changeToEnglishTitle }
 dispatch(Action(HomePageAction.changeToEnglishTitle))
 ```
 
-### Reducer
+#### Reducer
 
 因为 `Reducer` 是属于 `Page` 的一部分，所以我们需要一个用于返回 `Reducers` 到 `Page` 的函数。
 
@@ -221,7 +223,7 @@ class HomePage extends Page<HomePageState, String> {
 ```
 
 
-## 使用参数修改数据
+### 使用参数修改数据
 
 有一种场景是，数据是非本地的，即可能是网络请求得到的，这种情况下，通过传参来修改 `State` ：
 
@@ -272,7 +274,7 @@ dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
 ```
 
 
-## 处理副作用
+### 处理副作用
 
 由于 Redux 是同步的，单向的，纯函数的，导致一些行为无法被处理，例如异步请求。
 
@@ -293,16 +295,67 @@ Effect<HomePageState> buildEffect() {
 }
 ```
 
+### 使用组件与适配器
 
-
-为了让它生效，需要在页面上加入它：
-
+在定义页面的类时，有一个 `dependencies` 的参数，用于描述页面使用到的组件 (Component) 和适配器 (Adapter)
+ ，其中 `slots` 是用来描述组件的。
 ```dart
 class HomePage extends Page<HomePageState, String> {
-  Home : super(
+  Home() : super(
   	initState: initState,
     view: viewBuilder,
-    effect: buildEffect(),
+    dependencies: Dependencies(
+      slots: <String, Dependent<HomePageState>>{
+        'FishButton': FishButtonConnector() + FishButton(),
+      },
+    ),
   );
 }
 ```
+
+## 组件
+
+### 简单组件
+
+和页面不一样的地方在于，组件不需要 `initState` 函数去初始化数据，而是通过 `connector` 去向其做挂载的页面获取数据。
+
+也就是说，我们需要定义一个 `connector`。
+
+同样的，先为组件定义一个 `State` 类：
+
+```dart
+class ButtonState {
+  String text;
+}
+```
+
+然后定义 `Connector` ，最简单的是继承 `ConnOp<T, P>` 类，`T` 为页面的 `State` , `P` 为组件的 `State` ：
+
+```dart
+// 假设 HomePageState 上有 buttonText
+class ButtonConnector extends ConnOp<HomePageState, ButtonState> {
+  @override
+  ButtonState get(HomePageState state) {
+    return new ButtonState()
+      ..text = state.buttonText;
+  }
+
+  // 假设有点击事件，点击按钮后修改按钮文本
+  @override
+  void set(HomePageState state, ButtonState subState) {
+    state.buttonText = subState.text + '1';
+  }
+}
+```
+
+组件是继承 `Component<T>` 类的，`T` 为组件的 `State` 类，
+
+```dart
+class ButtonComponent extends Component<ButtonState> {
+  ButtonComponent() : super(
+    view: buildView,
+  );
+}
+```
+
+### 
