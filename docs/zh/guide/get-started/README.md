@@ -6,7 +6,33 @@ title: 入门
 
 ## 什么是 Fish Redux
 
+### 简介
 **Fish Redux** 是一个以 Redux 作为数据管理的思想，以数据驱动视图，组装式的 Flutter 应用框架， 它特别适用于构建中大型的复杂应用。
+
+### 构成
+
+**Fish Redux** 采用目前主流的开发方式，也是符合 **Flutter** 的设计理念，即可插拔的组件式开发。小部件是一个的组件(Component) ，复杂页面是由多个组件组成的组件。
+
+为了降低耦合度和提高可扩展性，**Fish Redux** 将组件拆分成几个部分。
+
+#### 数据
+
+核心部分。定义了组件需要用到的数据，也是组件的重要组成，其分为两部分：
+- 参与视图工作的 Redux
+- 不参与视图工作的 LocalProps
+
+
+#### 视图
+
+最基本的，也就是最重要的部分，每一个组件都应该是可视的。
+
+所以在组件构建时，我们必须为组件提供一个用于构建视图的函数。
+
+#### 依赖
+
+描述了组件与组件之间的关系，也是可插拔的组件式开发的一个重要特性。其分为两部分：
+- 为列表而优化的 Adapter
+- 组件整体的组成部分 slot
 
 ## 安装
 
@@ -39,98 +65,133 @@ dependencies:
 [flipperkit_fish_redux_middleware](https://pub.dev/packages/flipperkit_fish_redux_middleware)
 
 
-## 构成
+## 构建应用
 
-**Fish Redux** 采用目前主流的开发方式，也是符合 **Flutter** 的设计理念，即可插拔的组件式开发。小部件是一个的组件(Component) ，复杂页面是由多个组件组成的组件。
+### 组件
 
-为了降低耦合度和提高可扩展性，**Fish Redux** 将组件拆分成几个部分。
+组件(Component)是 **Fish Redux** 最基本的元素。其与页面的区别在于，State 的数据是通过连接器(Connector)与其关联的父组件进行交流的。
 
-### 数据
-
-核心部分。定义了组件需要用到的数据，也是组件的重要组成，其分为两部分：
-- 参与视图工作的 `Redux` 。
-- 不参与视图工作的 `LocalProps` 。
-
-
-### 视图
-
-最基本的，也就是最重要的部分，每一个组件都应该是可视的。
-
-所以在组件构建时，我们必须为组件提供一个用于构建视图的函数。
-
-### 依赖
-
-描述了组件与组件之间的关系，也是可插拔的组件式开发的一个重要特性。其分为两部分：
-- 为列表而优化的 `Adapter`
-- 组件整体的组成部分 `slot`
-
-
-## 页面
-
-页面(Page)是一个行为丰富的组件，因为它的实现是在组件的基础上增加了 `AOP` 能力，以及独立的 `Store` 。
-
-### 简单页面
-
-既然是以数据驱动视图的开发，首先我们先为页面定义一个 `State` 类：
+既然是以数据驱动视图的开发，首先我们先为定义一个 `State` 类，以及组件数据必要的连接器：
 
 ```dart
-class HomePageState {
-  String title;
+class FishButtonState {
+  String text;
+}
+
+class FishButtonConnector extends Reselect1<HomePageState, FishButtonState, String> {
+  @override
+  FishButtonState computed(String buttonText) {
+    return new FishButtonState()
+      ..text = buttonText;
+  }
+
+  @override
+  String getSub0(HomePageState state) {
+    return state.buttonText;
+  }
+
+  @override
+  void set(HomePageState state, FishButtonState subState) {
+    state.buttonText = subState.text;
+  }
 }
 ```
+对于连接器(Connector)的更多详情，请参考[连接器](#)。
 
-构建一个页面，除了 `State` 类之后，最少还需要两个函数。
-
-一个是为页面初始化 `State` 的函数，例如：
-
-```dart
-HomePageState initState(String title) {
-  return new HomePageState()
-    ..title = title;
-}
-```
-
-该函数返回 `State` 类的实例，接受一个参数，参数类型与定义 `Page` 类提供的第二个类型一致。如何定义 `Page` 请往下阅读。
-
-另外一个是为页面提供视图的函数，例如：
+然后为组件声明一个必要的，用于提供视图的函数：
 
 ```dart
-Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewService) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(state.title),
-    ),
+Widget viewBuilder(FishButtonState state, Dispatch dispatch, ViewService veiwService) {
+  return FlatButton(
+    onPressed: () {},
+    child: Text(state.text),
   );
 }
 ```
 
 该函数返回 `Widget` ，接收三个参数：
-- state - 页面的 `State` 实例
-- dispatch - 来自 Redux ，用于发出数据修改意图的函数
-- viewService - 一些可能需要用到的 API 
+- state - 组件的 State 实例
+- dispatch - 用于发出数据修改意图的函数
+- viewService - 一些可能需要用到的 API
 
-
-最后，定义 `Page` 类：
+最后定义 `Component` 类：
 
 ```dart
-class HomePage extends Page<HomePageState, String> {
-  Home() : super(
-  	initState: initState,
+class FishButton extends Component<FishButtonState> {
+  FishButton() : super(
     view: viewBuilder,
   );
 }
 ```
 
 
-### Redux
+### 页面
+
+页面(Page)是一个行为丰富的组件，因为它的实现是在组件的基础上增加了 AOP 能力，以及自有的 State 。
+
+同样的，先定义 `State` 类：
+
+```dart
+class HomePageState {
+  String buttonText;
+}
+```
+
+因为页面的 State 是自有的，所以构建页面，除了 `State` 类和提供视图的函数外，还需要一个为页面初始化 State 的函数，例如：
+
+```dart
+HomePageState initState(String buttonText) {
+  return new HomePageState()
+    ..buttonText = buttonText;
+}
+```
+
+该函数返回 `State` 类的实例，接受一个参数，参数类型与定义 `Page` 类时，提供的第二个类型一致。
+
+定义 `Page` 类，并挂载组件：
+
+```dart
+class HomePage extends Page<HomePageState, String> {
+  HomePage() : super(
+  	initState: initState,
+    view: viewBuilder,
+    dependencies: Dependencies<HomePageState>(
+      adapter: null,
+      slots: <String, Dependent<HomePageState>>{
+        'FishButton': FishButton() + FishButtonConnector(),
+      }),
+    );
+  );
+}
+```
+对于依赖(Dependencies)的更多详情，请参考[依赖](#)。
+
+页面的视图提供函数与组件一样。这里主要为示例在视图中使用已加入依赖的组件：
+
+```dart
+Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewService) {
+  return Scaffold(
+    body: Container(
+      child: viewService.buildComponent('FishButton'),
+    ),
+  );
+}
+```
+
+### 适配器
+
+// TODO
+
+
+## 数据驱动
 
 多数情况下，驱动视图的数据并非一成不变的，这也是使用 Redux 的原因。
 
-**Fish Redux** 遵循 Redux 单向数据流的设计核心，在修改 `State` 的时候下，必须通过触发 `Action` ，然后调用 `Reducer` 去修改数据。
+**Fish Redux** 遵循 Redux 单向数据流的设计核心，在修改 State 的时候下，必须通过触发 Action ，然后调用 Reducer 去修改数据。
 
-#### State
+### State
 
-一个可变的 `State` 需要实现 `Cloneable<T>` 类。其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变：
+一个可变的 State 需要实现 `Cloneable<T>` 类。其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 State 已经改变：
 
 ```dart
 class HomePageState implements Cloneable<HomePageState> {
@@ -143,112 +204,33 @@ class HomePageState implements Cloneable<HomePageState> {
   }
 }
 ```
-需要注意的是，**State 在不使用 final 去声明时，是可以任意读写的。所以即使没有限制，修改 State 也应当通过触发 Action 来进行**。
 
 
-#### Action
+### Action
 
-在 `View` 或 `Effect` 中触发 `Action`，是通过 `dispatch` 函数：
+在 Redux 中，修改 `State` 是通过调用 `dispatch` 函数去触发 `Action` 来进行的，
+但需要注意的是，`Action` 仅仅是表达了修改 `State` 的意图。
+
 ```dart
-dispatch(Action('changeToEnglishTitle'));
+// 在 viewBuilder 中
+dispatch(new Action('changeToEnglishTitle'));
 
-// or
-dispatch(Action('changeToOtherTitle', payload: 'other title'));
+// 在 effect 中
+ctx.dispatch(new Action('changeToOtherTitle', payload: 'other title'));
 ```
 
-`Action` 构造器接收两个参数：
-1. Object type - 必选，`Action` 类型
-2. dyanmic payload - 可选，接收的参数
+`Action` 的构造器接收两个参数：
+- type - 必要参数，Action 实例的类型
+- payload - 可选参数，Action 实例携带的参数
 
 
-为了更好的协作开发和减少低级错误，建议声明一个 `Action` 类型的枚举类：
-
-```dart
-enum HomePageAction { changeToEnglishTitle }
-```
-
-调用：
-```dart
-dispatch(Action(HomePageAction.changeToEnglishTitle))
-```
-
-#### Reducer
-
-因为 `Reducer` 是属于 `Page` 的一部分，所以我们需要一个用于返回 `Reducers` 到 `Page` 的函数。
+为了更好的协作开发和减少低级错误，建议声明一个 `Action` 类型的枚举类，以及定义一个集合返回 `Action` 的函数的类，这样可以约束到 `payload` 的类型：
 
 ```dart
-Reducer<HomePageState> buildReducer() {
-  return asReducer({
-    HomePageAction.changeToEnglishTitle: _changeTitle,
-  });
-}
-```
-
-接着声明，实际操作数据的函数：
-```dart
-HomePageState _changeTitle(HomePageState state, Action action) {
-  return state.clone()
-    ..title = 'Title';
-  
-  /// 使用了 final 的 State
-  /// return HomePageState('Title');
-  /// 部分改变，部分不变
-  /// 如果 State 构造器为 HomePageState(this.title, this.subTitle)
-  /// return HomePageState('Title', state.subTitle);
-}
-```
-
-
-把 `Reducer` 加入到页面中：
-
-```dart
-class HomePage extends Page<HomePageState, String> {
-  Home : super(
-  	initState: initState,
-    view: viewBuilder,
-    reducer: buildReducer(),
-  );
-}
-```
-
-
-### 使用参数修改数据
-
-有一种场景是，数据是非本地的，即可能是网络请求得到的，这种情况下，通过传参来修改 `State` ：
-
-```dart
-// 使用枚举类约束 Action 类型
+// 枚举类
 enum HomePageAction { changeToEnglishTitle, changeToOtherTitle }
 
-// 定义 Reducer
-Reducer<HomePageState> buildReducer() {
-  return asReducer({
-    HomePageAction.changeToEnglishTitle: _changeTitle,
-    HomePageAction.changeToOtherTitle: _changeTitle,
-  });
-}
-
-HomePageState _changeTitle(HomePageState state, Action action) {
-  final newState = state.clone();
-  switch (action.type) {
-    case HomePageAction.changeToEnglishTitle:
-      newState.title = 'Title';
-      break;
-    case HomePageAction.changeToOtherTitle:
-      newState.title = action.payload;	// 使用参数
-      break;
-  }
-  return newState;
-}
-
-// 调用
-dispatch(Action(HomePageAction.changeToOtherTitle, payload: 'Fish Redux'));
-```
-
-
-比较建议的是，可以通过定义一个集合返回 `Action` 的函数的类，这样可以约束到 `payload` 的类型：
-
-```dart
+// 函数类
 class HomePageActionCreator {
   static Action changeToEnglishTitle() {
     return const Action(HomePageAction.changeToEnglishTitle);
@@ -262,12 +244,56 @@ class HomePageActionCreator {
 dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
 ```
 
+### Reducer
 
-### 处理副作用
+State 的实际操作者是 Reducer 。
+
+Reducer 是一个函数，它返回新的 `State` 实例，且接受两个参数：
+- state - 当前的状态
+- action - 触发的 Action 实例
+
+```dart
+HomePageState _changeTitle(HomePageState state, Action action) {
+  final newState = state.clone();
+  switch (action.type) {
+    case HomePageAction.changeToEnglishTitle:
+      newState.title = 'Title';
+      break;
+    case HomePageAction.changeToOtherTitle:
+      newState.title = action.payload;	// 使用参数
+      break;
+  }
+  return newState;
+}
+```
+
+通常，组件的 Reducer 不只一个，所以应当使用 `asReducer` 函数去将同个组件的 Reducer 组合成一个大的 Reducer ，并提供给组件。
+
+```dart
+Reducer<HomePageState> buildReducer() {
+  return asReducer({
+    HomePageAction.changeToEnglishTitle: _changeTitle,
+    HomePageAction.changeToOtherTitle: _changeTitle,
+  });
+}
+
+class HomePage extends Page<HomePageState, String> {
+  HomePage() : super(
+  	initState: initState,
+    view: viewBuilder,
+    reducer: buildReducer(),
+  );
+}
+```
+
+当触发 Action 时，框架内部会自动找到 Action 类型对应的 Reducer ，所以这里的类型应当是唯一的。
+
+
+### Effect
 
 由于 Redux 是同步的，单向的，纯函数的，导致一些行为无法被处理，例如异步请求。
 
-对此，我们可以使用 `Effect` 去解决：
+对此，我们可以使用 Effect 去解决：
 
 ```dart
 // 处理的函数
@@ -302,61 +328,3 @@ class HomePage extends Page<HomePageState, String> {
   );
 }
 ```
-
-## 组件
-
-现在的移动应用通常都是复杂的，多数页面都是由多个组件组成。
-
-在 Fish Redux 中，组件通过 `Component` 去定义的。
-
-### 组成部分
-
-`Page` 类继承于 `Component` ，所以可以参考页面的[组成部分](#组成部分) 。
-
-此外，组件的 `State` 来自于其挂载的父组件（或页面），所以组件需要一个连接器（Connector）来向其父组件进行数据交流。
-
-### 简单组件
-
-为组件定义 `State` 类：
-
-```dart
-// fish_button/state.dart
-class FishButtonState {
-  String text;
-}
-```
-
-你会注意到，该类没有实现 `Cloneable<T>` ，因为数据是从父组件获取，所以不需要实现。
-
-然后定义 `Component` 类：
-
-```dart
-// fish_button/component.dart
-class FishButton extends Component<FishButtonState> {
-  ButtonComponent() : super(
-    view: viewBuilder,  // viewBuilder 函数同页面一样
-  );
-}
-```
-
-在定义 `Connector` ，最简单的是继承 `ConnOp<T, P>` 类，`T` 为父组件的 `State` , `P` 为组件的 `State` ：
-
-```dart
-// fish_button/connector.dart
-// 假设 HomePageState 上有 buttonText
-class ButtonConnector extends ConnOp<HomePageState, FishButtonState> {
-  @override
-  FishButtonState get(HomePageState state) {
-    return new FishButtonState()
-      ..text = state.buttonText;
-  }
-
-  // 假设有点击事件，点击按钮后修改按钮文本
-  @override
-  void set(HomePageState state, FishButtonState subState) {
-    state.buttonText = subState.text + '1';
-  }
-}
-```
-
-### 
