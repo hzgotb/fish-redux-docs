@@ -6,7 +6,7 @@ title: 入门
 
 ## 什么是 Fish Redux
 
-**Fish Redux** 是一个基于 Redux 数据管理的组装式 Flutter 应用框架， 它特别适用于构建中大型的复杂应用。
+**Fish Redux** 是一个以 Redux 作为数据管理的思想，以数据驱动视图，组装式的 Flutter 应用框架， 它特别适用于构建中大型的复杂应用。
 
 ## 安装
 
@@ -16,7 +16,7 @@ title: 入门
 ```yaml
 ...
 dependencies:
-  fish_redux: ^0.2.2
+  fish_redux: ^0.2.4
 ...
 ```
 
@@ -39,31 +39,39 @@ dependencies:
 [flipperkit_fish_redux_middleware](https://pub.dev/packages/flipperkit_fish_redux_middleware)
 
 
+## 构成
+
+**Fish Redux** 采用目前主流的开发方式，也是符合 **Flutter** 的设计理念，即可插拔的组件式开发。小部件是一个的组件(Component) ，复杂页面是由多个组件组成的组件。
+
+为了降低耦合度和提高可扩展性，**Fish Redux** 将组件拆分成几个部分。
+
+### 数据
+
+核心部分。定义了组件需要用到的数据，也是组件的重要组成，其分为两部分：
+- 参与视图工作的 `Redux` 。
+- 不参与视图工作的 `LocalProps` 。
+
+
+### 视图
+
+最基本的，也就是最重要的部分，每一个组件都应该是可视的。
+
+所以在组件构建时，我们必须为组件提供一个用于构建视图的函数。
+
+### 依赖
+
+描述了组件与组件之间的关系，也是可插拔的组件式开发的一个重要特性。其分为两部分：
+- 为列表而优化的 `Adapter`
+- 组件整体的组成部分 `slot`
+
+
 ## 页面
-### 组成部分
 
-**Fish Redux** 的特点是配置式组装。 
-
-在视图方面将一个大的页面拆解成一些独立的模块，称之为组件（Component）。
-
-为了更好的扩展和解耦，**Fish Redux** 将模块拆分为几个部分：
-- View - 视图
-- State - 数据
-- Reducer - 操作数据
-- Effect - 处理副作用
-- Dependencies - 子组件挂载
-
-
-
-页面（Page）是一个特殊的模块，它继承于组件，有组件的所有特性。
-
-页面和组件的区别在于，页面的数据是自身的，它有一个必要的函数 `initState` ，用于初始化自身的数据，而组件的数据是通过连接器（Connector）向其父组件（可能是一个页面）获取的。
-
-
+页面(Page)是一个行为丰富的组件，因为它的实现是在组件的基础上增加了 `AOP` 能力，以及独立的 `Store` 。
 
 ### 简单页面
 
-首先，我们可以先为页面定义一个 `State` 类：
+既然是以数据驱动视图的开发，首先我们先为页面定义一个 `State` 类：
 
 ```dart
 class HomePageState {
@@ -71,55 +79,20 @@ class HomePageState {
 }
 ```
 
+构建一个页面，除了 `State` 类之后，最少还需要两个函数。
 
-
-还有页面必要的，用于初始化数据的函数 `initState` ，它接收一个参数，参数类型和页面定义的一致：
+一个是为页面初始化 `State` 的函数，例如：
 
 ```dart
-HomePageState initState(String title) {
-  return HomePageState()
-    ..title = '标题';
-    // or ..title = title;
+HomePageState initState(String title) {
+  return new HomePageState()
+    ..title = title;
 }
 ```
 
+该函数返回 `State` 类的实例，接受一个参数，参数类型与定义 `Page` 类提供的第二个类型一致。如何定义 `Page` 请往下阅读。
 
-有些开发者可能会想用 `final` ，那么我们可以通过构造器来创建一个实例。
-
-```dart
-class HomePageState {
-  final String title;
-
-  HomePageState(this.title);
-}
-
-HomePageState initState(String title) {
-  return HomePageState('标题');
-  // return HomePageState(title);
-}
-```
-
-
-
-在 **Fish Redux** 中，每个页面继承于 `Page<T,P>` 类，其中 `T` 为对应的 `State` 类， `P` 为初始化 `State` 的函数的参数的类型：
-
-```dart
-class HomePage extends Page<HomePageState, String> {
-  Home : super(
-  	initState: initState,
-    view: viewBuilder,
-  );
-}
-```
-
-
-
-除了 `initState` 函数外，还有一个必要的函数是提供视图的，即 `viewBuilder` ，它接收三个参数：
-
-1. T state - 对应的数据
-2. Dispatch dispatch - 用于发送操作数据的意图
-3. ViewService viewService - 一些扩展的服务
-
+另外一个是为页面提供视图的函数，例如：
 
 ```dart
 Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewService) {
@@ -131,25 +104,41 @@ Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewServi
 }
 ```
 
+该函数返回 `Widget` ，接收三个参数：
+- state - 页面的 `State` 实例
+- dispatch - 来自 Redux ，用于发出数据修改意图的函数
+- viewService - 一些可能需要用到的 API 
 
 
-### 可变的数据
+最后，定义 `Page` 类：
 
-多数情况下，我们都需要修改页面的数据。
+```dart
+class HomePage extends Page<HomePageState, String> {
+  Home() : super(
+  	initState: initState,
+    view: viewBuilder,
+  );
+}
+```
 
-**Fish Redux** 遵循 **Redux** 单向数据流的设计核心，在 `State` 可变的情况下，修改 `State` ，必须通过触发 `Action` ，然后调用 `Reducer` 去修改数据。
+
+### Redux
+
+多数情况下，驱动视图的数据并非一成不变的，这也是使用 Redux 的原因。
+
+**Fish Redux** 遵循 Redux 单向数据流的设计核心，在修改 `State` 的时候下，必须通过触发 `Action` ，然后调用 `Reducer` 去修改数据。
 
 #### State
 
-首先声明一个可变的 `State`，并实现 `Cloneable<T>` 抽象类。可变 `State` 的核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变。
+一个可变的 `State` 需要实现 `Cloneable<T>` 类。其核心在于 `clone` 函数，它总是返回一个新的实例，使框架感知到 `State` 已经改变：
 
 ```dart
 class HomePageState implements Cloneable<HomePageState> {
-  String title
+  String title;
 
   @override
   clone() {
-    return HomePageState()
+    return new HomePageState()
       ..title = title;
   }
 }
@@ -299,6 +288,7 @@ Effect<HomePageState> buildEffect() {
 
 在定义页面的类时，有一个 `dependencies` 的参数，用于描述页面使用到的组件 (Component) 和适配器 (Adapter)
  ，其中 `slots` 是用来描述组件的。
+
 ```dart
 class HomePage extends Page<HomePageState, String> {
   Home() : super(
@@ -315,46 +305,57 @@ class HomePage extends Page<HomePageState, String> {
 
 ## 组件
 
+现在的移动应用通常都是复杂的，多数页面都是由多个组件组成。
+
+在 Fish Redux 中，组件通过 `Component` 去定义的。
+
+### 组成部分
+
+`Page` 类继承于 `Component` ，所以可以参考页面的[组成部分](#组成部分) 。
+
+此外，组件的 `State` 来自于其挂载的父组件（或页面），所以组件需要一个连接器（Connector）来向其父组件进行数据交流。
+
 ### 简单组件
 
-和页面不一样的地方在于，组件不需要 `initState` 函数去初始化数据，而是通过 `connector` 去向其做挂载的页面获取数据。
-
-也就是说，我们需要定义一个 `connector`。
-
-同样的，先为组件定义一个 `State` 类：
+为组件定义 `State` 类：
 
 ```dart
-class ButtonState {
+// fish_button/state.dart
+class FishButtonState {
   String text;
 }
 ```
 
-然后定义 `Connector` ，最简单的是继承 `ConnOp<T, P>` 类，`T` 为页面的 `State` , `P` 为组件的 `State` ：
+你会注意到，该类没有实现 `Cloneable<T>` ，因为数据是从父组件获取，所以不需要实现。
+
+然后定义 `Component` 类：
 
 ```dart
+// fish_button/component.dart
+class FishButton extends Component<FishButtonState> {
+  ButtonComponent() : super(
+    view: viewBuilder,  // viewBuilder 函数同页面一样
+  );
+}
+```
+
+在定义 `Connector` ，最简单的是继承 `ConnOp<T, P>` 类，`T` 为父组件的 `State` , `P` 为组件的 `State` ：
+
+```dart
+// fish_button/connector.dart
 // 假设 HomePageState 上有 buttonText
-class ButtonConnector extends ConnOp<HomePageState, ButtonState> {
+class ButtonConnector extends ConnOp<HomePageState, FishButtonState> {
   @override
-  ButtonState get(HomePageState state) {
-    return new ButtonState()
+  FishButtonState get(HomePageState state) {
+    return new FishButtonState()
       ..text = state.buttonText;
   }
 
   // 假设有点击事件，点击按钮后修改按钮文本
   @override
-  void set(HomePageState state, ButtonState subState) {
+  void set(HomePageState state, FishButtonState subState) {
     state.buttonText = subState.text + '1';
   }
-}
-```
-
-组件是继承 `Component<T>` 类的，`T` 为组件的 `State` 类，
-
-```dart
-class ButtonComponent extends Component<ButtonState> {
-  ButtonComponent() : super(
-    view: buildView,
-  );
 }
 ```
 
