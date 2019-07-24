@@ -110,9 +110,9 @@ Widget viewBuilder(FishButtonState state, Dispatch dispatch, ViewService veiwSer
 ```
 
 该函数返回 `Widget` ，接收三个参数：
-- state - 组件的 State 实例
-- dispatch - 用于发出数据修改意图的函数
-- viewService - 一些可能需要用到的 API
+- T state - 组件的 State 实例
+- Dispatch dispatch - 用于发出数据修改意图的函数
+- ViewService viewService - 一些可能需要用到的 API
 
 最后定义 `Component` 类：
 
@@ -178,11 +178,6 @@ Widget viewBuilder(HomePageState state, Dispatch dispatch, ViewService viewServi
 }
 ```
 
-### 适配器
-
-// TODO
-
-
 ## 数据驱动
 
 多数情况下，驱动视图的数据并非一成不变的，这也是使用 Redux 的原因。
@@ -212,16 +207,12 @@ class HomePageState implements Cloneable<HomePageState> {
 但需要注意的是，`Action` 仅仅是表达了修改 `State` 的意图。
 
 ```dart
-// 在 viewBuilder 中
-dispatch(new Action('changeToEnglishTitle'));
-
-// 在 effect 中
-ctx.dispatch(new Action('changeToOtherTitle', payload: 'other title'));
+dispatch(new Action('changeToOtherTitle', payload: 'Other title'));
 ```
 
 `Action` 的构造器接收两个参数：
-- type - 必要参数，Action 实例的类型
-- payload - 可选参数，Action 实例携带的参数
+- Object type - 必要参数，Action 实例的类型
+- dyanmic payload - 可选参数，Action 实例携带的参数
 
 
 为了更好的协作开发和减少低级错误，建议声明一个 `Action` 类型的枚举类，以及定义一个集合返回 `Action` 的函数的类，这样可以约束到 `payload` 的类型：
@@ -249,8 +240,8 @@ dispatch(HomePageActionCreator.changeToOtherTitle('Fish Redux'));
 State 的实际操作者是 Reducer 。
 
 Reducer 是一个函数，它返回新的 `State` 实例，且接受两个参数：
-- state - 当前的状态
-- action - 触发的 Action 实例
+- T state - 当前的状态
+- Action action - 触发的 Action 实例
 
 ```dart
 HomePageState _changeTitle(HomePageState state, Action action) {
@@ -286,45 +277,40 @@ class HomePage extends Page<HomePageState, String> {
 }
 ```
 
-当触发 Action 时，框架内部会自动找到 Action 类型对应的 Reducer ，所以这里的类型应当是唯一的。
+当触发 Action 时，框架内部会自动找到 Action 类型对应的 Reducer ，所以这里作为键的 Action 类型必须是唯一的。
 
 
 ### Effect
 
-由于 Redux 是同步的，单向的，纯函数的，导致一些行为无法被处理，例如异步请求。
+由于原生的 Redux 是同步的，单向的，纯函数的，导致一些行为无法被处理，例如异步请求。
 
-对此，我们可以使用 Effect 去解决：
+对此，我们可以使用 Effect 去解决。
+
+Effect 也是一个函数，它返回一个值或者 `Future` ，接收两个参数：
+- Action action - Action 的实例
+- Context\<T> context - 当前数据流的上下文
 
 ```dart
-// 处理的函数
 void _getTile(Action action, Context<HomePageState> context) async {
   final res = await http.get(url);
   context.dispatch(HomeActionCreator.changeToOtherTitle(res.data));
 }
+```
 
-// 返回 Effect 组合给页面的函数
+和 Reducer 一样，组件通常也是有多个 Effect ,所以我们会使用 `combineEffects` 函数将同个组件的 Effect 组合起来，并提供给组件。
+```dart
+class HomePage extends Page<HomePageState, String> {
+  HomePage() : super(
+  	initState: initState,
+    view: viewBuilder,
+    reducer: buildReducer(),
+    effect: buildEffect(),
+  );
+}
+
 Effect<HomePageState> buildEffect() {
   return combineEffects(<Object, Effect<HomePageState>>{
     HomePageAction.getTitle: _getTitle,
   });
-}
-```
-
-### 使用组件与适配器
-
-在定义页面的类时，有一个 `dependencies` 的参数，用于描述页面使用到的组件 (Component) 和适配器 (Adapter)
- ，其中 `slots` 是用来描述组件的。
-
-```dart
-class HomePage extends Page<HomePageState, String> {
-  Home() : super(
-  	initState: initState,
-    view: viewBuilder,
-    dependencies: Dependencies(
-      slots: <String, Dependent<HomePageState>>{
-        'FishButton': FishButtonConnector() + FishButton(),
-      },
-    ),
-  );
 }
 ```
